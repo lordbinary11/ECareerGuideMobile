@@ -5,41 +5,63 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Card, Title, Button } from 'react-native-paper';
+import { useAuth } from '../contexts/AuthContext';
+import { theme } from '../theme';
 
-const { width } = Dimensions.get('window');
-
-export default function HomePage() {
+export default function HomeScreen() {
   const router = useRouter();
+  const { isAuthenticated, user } = useAuth();
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    } else {
+      router.push('/login');
+    }
+  };
 
   const features = [
     {
-      icon: 'bulb-outline',
-      title: 'Expert Guidance',
-      description: 'Connect with experienced career counselors tailored to your needs.',
+      icon: 'people-outline',
+      title: 'Career Counselors',
+      description: 'Connect with experienced professionals',
+      color: '#667eea',
+    },
+    {
+      icon: 'chatbubble-ellipses-outline',
+      title: 'AI Career Chat',
+      description: 'Get instant career advice from AI',
+      color: '#48bb78',
+    },
+    {
+      icon: 'document-text-outline',
+      title: 'Resume Builder',
+      description: 'Create professional resumes',
+      color: '#ed8936',
     },
     {
       icon: 'trending-up-outline',
-      title: 'Personalized Paths',
-      description: 'Receive customized advice and resources for your unique career goals.',
+      title: 'Learning Journey',
+      description: 'Track your career progress',
+      color: '#9f7aea',
     },
     {
-      icon: 'rocket-outline',
-      title: 'Achieve Your Dreams',
-      description: 'Gain the confidence and tools to land your dream job and grow professionally.',
+      icon: 'star-outline',
+      title: 'Top Careers',
+      description: 'Explore career options',
+      color: '#f56565',
     },
-  ];
-
-  const quotes = [
-    "The only way to do great work is to love what you do.",
-    "Choose a job you love, and you will never have to work a day in your life.",
-    "Your work is going to fill a large part of your life, and the only way to be truly satisfied is to do what you believe is great work.",
-    "The future belongs to those who believe in the beauty of their dreams."
+    {
+      icon: 'school-outline',
+      title: 'Elite Institutions',
+      description: 'Discover top universities',
+      color: '#38b2ac',
+    },
   ];
 
   return (
@@ -47,77 +69,90 @@ export default function HomePage() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>ECareerGuide</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={styles.loginButton}
-              onPress={() => router.push('/login')}
-            >
-              <Text style={styles.loginButtonText}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.signupButton}
-              onPress={() => router.push('/signup')}
-            >
-              <Text style={styles.signupButtonText}>Sign Up</Text>
-            </TouchableOpacity>
+          <View style={styles.logoContainer}>
+            <Ionicons name="school" size={40} color="#667eea" />
           </View>
+          <Text style={styles.title}>ECareerGuide</Text>
+          <Text style={styles.subtitle}>
+            Your comprehensive career guidance platform
+          </Text>
         </View>
 
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <View style={styles.heroContent}>
-            <Text style={styles.heroTitle}>
-              Unlock Your <Text style={styles.highlightText}>Career Potential</Text>
-            </Text>
-            <Text style={styles.heroSubtitle}>
-              Personalized guidance to help you navigate your professional journey, find your passion, and achieve your career goals.
-            </Text>
-            <TouchableOpacity
-              style={styles.getStartedButton}
-              onPress={() => router.push('/signup')}
-            >
-              <Ionicons name="rocket-outline" size={20} color="#fff" />
-              <Text style={styles.getStartedButtonText}>Get Started Now</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.heroImageContainer}>
-            <View style={styles.placeholderImage}>
-              <Ionicons name="person-outline" size={80} color="#667eea" />
-            </View>
-          </View>
-        </View>
+        {/* Welcome Message */}
+        {isAuthenticated && (
+          <Card style={styles.welcomeCard}>
+            <Card.Content>
+              <Title style={styles.welcomeTitle}>
+                Welcome back, {user?.full_name || user?.name || 'User'}!
+              </Title>
+              <Text style={styles.welcomeText}>
+                Continue your career journey with personalized guidance.
+              </Text>
+            </Card.Content>
+          </Card>
+        )}
 
-        {/* Features Section */}
-        <View style={styles.featuresSection}>
-          <Text style={styles.sectionTitle}>Why ECareerGuide?</Text>
-          {features.map((feature, index) => (
-            <View key={index} style={styles.featureCard}>
-              <View style={styles.featureIcon}>
-                <Ionicons name={feature.icon} size={30} color="#667eea" />
-              </View>
-              <View style={styles.featureContent}>
+        {/* Features Grid */}
+        <View style={styles.featuresContainer}>
+          <Text style={styles.sectionTitle}>What We Offer</Text>
+          <View style={styles.featuresGrid}>
+            {features.map((feature, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.featureCard}
+                onPress={() => {
+                  if (isAuthenticated) {
+                    router.push('/dashboard');
+                  } else {
+                    router.push('/login');
+                  }
+                }}
+              >
+                <View style={[styles.featureIcon, { backgroundColor: feature.color + '20' }]}>
+                  <Ionicons name={feature.icon} size={24} color={feature.color} />
+                </View>
                 <Text style={styles.featureTitle}>{feature.title}</Text>
                 <Text style={styles.featureDescription}>{feature.description}</Text>
-              </View>
-            </View>
-          ))}
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
-        {/* Quotes Section */}
-        <View style={styles.quotesSection}>
-          <Text style={styles.sectionTitle}>Inspiring Words</Text>
-          {quotes.map((quote, index) => (
-            <View key={index} style={styles.quoteCard}>
-              <Text style={styles.quoteText}>"{quote}"</Text>
+        {/* Call to Action */}
+        <View style={styles.ctaContainer}>
+          <Button
+            mode="contained"
+            onPress={handleGetStarted}
+            style={styles.ctaButton}
+            contentStyle={styles.ctaButtonContent}
+          >
+            {isAuthenticated ? 'Go to Dashboard' : 'Get Started'}
+          </Button>
+          
+          {!isAuthenticated && (
+            <View style={styles.authButtons}>
+              <Button
+                mode="outlined"
+                onPress={() => router.push('/login')}
+                style={styles.authButton}
+              >
+                Sign In
+              </Button>
+              <Button
+                mode="outlined"
+                onPress={() => router.push('/signup')}
+                style={styles.authButton}
+              >
+                Sign Up
+              </Button>
             </View>
-          ))}
+          )}
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            © {new Date().getFullYear()} ECareerGuide. All rights reserved.
+            Empowering students and professionals with career guidance
           </Text>
         </View>
       </ScrollView>
@@ -131,112 +166,66 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-  },
-  logo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#667eea',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  loginButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  loginButtonText: {
-    color: '#667eea',
-    fontWeight: '600',
-  },
-  signupButton: {
-    backgroundColor: '#667eea',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  signupButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  heroSection: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
     paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#f7fafc',
+    borderRadius: 40,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
   },
-  heroContent: {
-    flex: 1,
-    marginRight: 20,
-  },
-  heroTitle: {
-    fontSize: 28,
+  title: {
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#1a202c',
-    marginBottom: 15,
-    lineHeight: 36,
+    marginBottom: 8,
   },
-  highlightText: {
-    color: '#667eea',
-  },
-  heroSubtitle: {
+  subtitle: {
     fontSize: 16,
     color: '#4a5568',
-    marginBottom: 25,
+    textAlign: 'center',
     lineHeight: 24,
   },
-  getStartedButton: {
+  welcomeCard: {
+    margin: 20,
     backgroundColor: '#667eea',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 25,
-    gap: 8,
   },
-  getStartedButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
+  welcomeTitle: {
+    color: '#ffffff',
+    fontSize: 18,
   },
-  heroImageContainer: {
-    width: 120,
-    height: 120,
+  welcomeText: {
+    color: '#ffffff',
+    opacity: 0.9,
+    marginTop: 8,
   },
-  placeholderImage: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#e2e8f0',
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  featuresSection: {
+  featuresContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    marginBottom: 30,
   },
   sectionTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1a202c',
+    marginBottom: 20,
     textAlign: 'center',
-    marginBottom: 30,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
   },
   featureCard: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    padding: 20,
+    width: '48%',
+    backgroundColor: '#ffffff',
+    padding: 16,
     borderRadius: 12,
-    marginBottom: 15,
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -247,60 +236,55 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   featureIcon: {
-    width: 50,
-    height: 50,
-    backgroundColor: '#f7fafc',
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 15,
-  },
-  featureContent: {
-    flex: 1,
+    marginBottom: 12,
   },
   featureTitle: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1a202c',
-    marginBottom: 5,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   featureDescription: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#4a5568',
-    lineHeight: 20,
-  },
-  quotesSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  quoteCard: {
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 12,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  quoteText: {
-    fontSize: 16,
-    color: '#4a5568',
-    fontStyle: 'italic',
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 16,
+  },
+  ctaContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+  ctaButton: {
+    backgroundColor: '#667eea',
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  ctaButtonContent: {
+    paddingVertical: 12,
+  },
+  authButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  authButton: {
+    flex: 1,
+    borderColor: '#667eea',
+    borderWidth: 1,
   },
   footer: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    alignItems: 'center',
+    paddingBottom: 40,
   },
   footerText: {
     fontSize: 14,
-    color: '#718096',
+    color: '#4a5568',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 }); 

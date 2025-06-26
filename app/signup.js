@@ -13,75 +13,109 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { TextInput as PaperTextInput, Button, Card, Title, Checkbox } from 'react-native-paper';
+import { useAuth } from '../contexts/AuthContext';
+import { theme } from '../theme';
 
-export default function Signup() {
+export default function SignupScreen() {
   const router = useRouter();
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    full_name: '',
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'student', // student or counselor
+    role: 'user', // 'user' or 'counselor'
+    // Counselor-specific fields
+    phone: '',
+    specialization: '',
+    experience: '',
+    availability: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const updateFormData = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const validateForm = () => {
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return false;
+  const handleSignup = async () => {
+    // Validation
+    if (!formData.full_name.trim() || !formData.email.trim() || !formData.password) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
     }
 
-    if (formData.password !== formData.confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return false;
+    if (!formData.email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
     }
 
     if (formData.password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters long');
-      return false;
+      return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      Alert.alert('Error', 'Please enter a valid email address');
-      return false;
+    if (formData.password !== formData.confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
     }
 
-    return true;
+    if (!acceptedTerms) {
+      Alert.alert('Error', 'Please accept the terms and conditions');
+      return;
+    }
+
+    // Counselor-specific validation
+    if (formData.role === 'counselor') {
+      if (!formData.phone.trim() || !formData.specialization.trim() || 
+          !formData.experience.trim() || !formData.availability.trim()) {
+        Alert.alert('Error', 'Please fill in all counselor fields');
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      const userData = {
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      };
+
+      if (formData.role === 'user') {
+        userData.full_name = formData.full_name;
+      } else {
+        userData.name = formData.full_name;
+        userData.phone = formData.phone;
+        userData.specialization = formData.specialization;
+        userData.experience = parseInt(formData.experience);
+        userData.availability = formData.availability;
+      }
+
+      const result = await register(userData);
+      
+      if (result.success) {
+        Alert.alert('Success', result.message, [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/login'),
+          },
+        ]);
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSignup = async () => {
-    if (!validateForm()) return;
-
-    setIsLoading(true);
-    
-    try {
-      // TODO: Implement actual signup logic here
-      // For now, we'll simulate a successful signup
-      setTimeout(() => {
-        setIsLoading(false);
-        Alert.alert(
-          'Success',
-          'Account created successfully! Please sign in.',
-          [
-            {
-              text: 'OK',
-              onPress: () => router.replace('/login'),
-            },
-          ]
-        );
-      }, 1500);
-    } catch (error) {
-      setIsLoading(false);
-      Alert.alert('Error', 'Signup failed. Please try again.');
-    }
+  const handleLogin = () => {
+    router.push('/login');
   };
 
   return (
@@ -113,161 +147,179 @@ export default function Signup() {
 
           {/* Signup Form */}
           <View style={styles.formContainer}>
-            {/* Name Fields */}
-            <View style={styles.nameRow}>
-              <View style={[styles.inputContainer, styles.halfWidth]}>
-                <Ionicons name="person-outline" size={20} color="#a0aec0" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="First name"
-                  placeholderTextColor="#a0aec0"
-                  value={formData.firstName}
-                  onChangeText={(value) => updateFormData('firstName', value)}
-                  autoCapitalize="words"
-                />
-              </View>
-              <View style={[styles.inputContainer, styles.halfWidth]}>
-                <Ionicons name="person-outline" size={20} color="#a0aec0" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Last name"
-                  placeholderTextColor="#a0aec0"
-                  value={formData.lastName}
-                  onChangeText={(value) => updateFormData('lastName', value)}
-                  autoCapitalize="words"
-                />
-              </View>
-            </View>
-
-            {/* Email Field */}
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#a0aec0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                placeholderTextColor="#a0aec0"
-                value={formData.email}
-                onChangeText={(value) => updateFormData('email', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            {/* Password Fields */}
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#a0aec0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#a0aec0"
-                value={formData.password}
-                onChangeText={(value) => updateFormData('password', value)}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                  size={20}
-                  color="#a0aec0"
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#a0aec0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Confirm password"
-                placeholderTextColor="#a0aec0"
-                value={formData.confirmPassword}
-                onChangeText={(value) => updateFormData('confirmPassword', value)}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'}
-                  size={20}
-                  color="#a0aec0"
-                />
-              </TouchableOpacity>
-            </View>
-
             {/* Role Selection */}
             <View style={styles.roleContainer}>
-              <Text style={styles.roleLabel}>I am a:</Text>
-              <View style={styles.roleButtons}>
-                <TouchableOpacity
+              <TouchableOpacity
+                style={[
+                  styles.roleButton,
+                  formData.role === 'user' && styles.roleButtonActive,
+                ]}
+                onPress={() => updateFormData('role', 'user')}
+              >
+                <Text
                   style={[
-                    styles.roleButton,
-                    formData.role === 'student' && styles.roleButtonActive
-                  ]}
-                  onPress={() => updateFormData('role', 'student')}
-                >
-                  <Ionicons 
-                    name="school-outline" 
-                    size={20} 
-                    color={formData.role === 'student' ? '#fff' : '#667eea'} 
-                  />
-                  <Text style={[
                     styles.roleButtonText,
-                    formData.role === 'student' && styles.roleButtonTextActive
-                  ]}>
-                    Student
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
+                    formData.role === 'user' && styles.roleButtonTextActive,
+                  ]}
+                >
+                  Student
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.roleButton,
+                  formData.role === 'counselor' && styles.roleButtonActive,
+                ]}
+                onPress={() => updateFormData('role', 'counselor')}
+              >
+                <Text
                   style={[
-                    styles.roleButton,
-                    formData.role === 'counselor' && styles.roleButtonActive
-                  ]}
-                  onPress={() => updateFormData('role', 'counselor')}
-                >
-                  <Ionicons 
-                    name="people-outline" 
-                    size={20} 
-                    color={formData.role === 'counselor' ? '#fff' : '#667eea'} 
-                  />
-                  <Text style={[
                     styles.roleButtonText,
-                    formData.role === 'counselor' && styles.roleButtonTextActive
-                  ]}>
-                    Counselor
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                    formData.role === 'counselor' && styles.roleButtonTextActive,
+                  ]}
+                >
+                  Counselor
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={[styles.signupButton, isLoading && styles.signupButtonDisabled]}
+            <PaperTextInput
+              label={formData.role === 'user' ? 'Full Name' : 'Name'}
+              value={formData.full_name}
+              onChangeText={(value) => updateFormData('full_name', value)}
+              mode="outlined"
+              style={styles.input}
+              left={<PaperTextInput.Icon icon="account" />}
+            />
+
+            <PaperTextInput
+              label="Email"
+              value={formData.email}
+              onChangeText={(value) => updateFormData('email', value)}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              left={<PaperTextInput.Icon icon="email" />}
+            />
+
+            <PaperTextInput
+              label="Password"
+              value={formData.password}
+              onChangeText={(value) => updateFormData('password', value)}
+              mode="outlined"
+              style={styles.input}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              left={<PaperTextInput.Icon icon="lock" />}
+              right={
+                <PaperTextInput.Icon
+                  icon={showPassword ? 'eye-off' : 'eye'}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
+            />
+
+            <PaperTextInput
+              label="Confirm Password"
+              value={formData.confirmPassword}
+              onChangeText={(value) => updateFormData('confirmPassword', value)}
+              mode="outlined"
+              style={styles.input}
+              secureTextEntry={!showConfirmPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              left={<PaperTextInput.Icon icon="lock-check" />}
+              right={
+                <PaperTextInput.Icon
+                  icon={showConfirmPassword ? 'eye-off' : 'eye'}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                />
+              }
+            />
+
+            {/* Counselor-specific fields */}
+            {formData.role === 'counselor' && (
+              <>
+                <PaperTextInput
+                  label="Phone Number"
+                  value={formData.phone}
+                  onChangeText={(value) => updateFormData('phone', value)}
+                  mode="outlined"
+                  style={styles.input}
+                  keyboardType="phone-pad"
+                  left={<PaperTextInput.Icon icon="phone" />}
+                />
+
+                <PaperTextInput
+                  label="Specialization"
+                  value={formData.specialization}
+                  onChangeText={(value) => updateFormData('specialization', value)}
+                  mode="outlined"
+                  style={styles.input}
+                  left={<PaperTextInput.Icon icon="briefcase" />}
+                />
+
+                <PaperTextInput
+                  label="Years of Experience"
+                  value={formData.experience}
+                  onChangeText={(value) => updateFormData('experience', value)}
+                  mode="outlined"
+                  style={styles.input}
+                  keyboardType="numeric"
+                  left={<PaperTextInput.Icon icon="calendar" />}
+                />
+
+                <PaperTextInput
+                  label="Availability"
+                  value={formData.availability}
+                  onChangeText={(value) => updateFormData('availability', value)}
+                  mode="outlined"
+                  style={styles.input}
+                  left={<PaperTextInput.Icon icon="clock" />}
+                  placeholder="e.g., Mon-Fri 9AM-5PM"
+                />
+              </>
+            )}
+
+            {/* Terms and Conditions */}
+            <View style={styles.termsContainer}>
+              <Checkbox
+                status={acceptedTerms ? 'checked' : 'unchecked'}
+                onPress={() => setAcceptedTerms(!acceptedTerms)}
+              />
+              <Text style={styles.termsText}>
+                I agree to the{' '}
+                <Text style={styles.linkText}>Terms and Conditions</Text>
+              </Text>
+            </View>
+
+            <Button
+              mode="contained"
               onPress={handleSignup}
-              disabled={isLoading}
+              style={styles.signupButton}
+              loading={loading}
+              disabled={loading}
             >
-              {isLoading ? (
-                <Text style={styles.signupButtonText}>Creating account...</Text>
-              ) : (
-                <Text style={styles.signupButtonText}>Create Account</Text>
-              )}
-            </TouchableOpacity>
+              {loading ? 'Creating Account...' : 'Create Account'}
+            </Button>
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>OR</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity style={styles.googleButton}>
-              <Ionicons name="logo-google" size={20} color="#ea4335" />
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
+            <Button
+              mode="outlined"
+              onPress={handleLogin}
+              style={styles.loginButton}
+              disabled={loading}
+            >
+              Already have an account? Sign In
+            </Button>
           </View>
 
           {/* Login Link */}
@@ -333,10 +385,9 @@ const styles = StyleSheet.create({
   formContainer: {
     marginBottom: 30,
   },
-  nameRow: {
+  roleContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
+    marginBottom: 24,
   },
   inputContainer: {
     flexDirection: 'row',

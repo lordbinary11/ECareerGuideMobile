@@ -13,33 +13,54 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { TextInput as PaperTextInput, Button, Card, Title, Paragraph } from 'react-native-paper';
+import { useAuth } from '../contexts/AuthContext';
+import { theme } from '../theme';
 
-export default function Login() {
+export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loginAs, setLoginAs] = useState('user'); // 'user' or 'counselor'
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  const { login } = useAuth();
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    setIsLoading(true);
-    
-    try {
-      // TODO: Implement actual login logic here
-      // For now, we'll simulate a successful login
-      setTimeout(() => {
-        setIsLoading(false);
-        router.replace('/dashboard');
-      }, 1500);
-    } catch (error) {
-      setIsLoading(false);
-      Alert.alert('Error', 'Login failed. Please try again.');
+    if (!email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
     }
+
+    setLoading(true);
+    try {
+      const result = await login(email, password, loginAs);
+      
+      if (result.success) {
+        Alert.alert('Success', result.message, [
+          {
+            text: 'OK',
+            onPress: () => router.replace('/dashboard'),
+          },
+        ]);
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = () => {
+    router.push('/signup');
   };
 
   return (
@@ -71,75 +92,102 @@ export default function Login() {
 
           {/* Login Form */}
           <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#a0aec0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email address"
-                placeholderTextColor="#a0aec0"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#a0aec0" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#a0aec0"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
+            {/* Role Selection */}
+            <View style={styles.roleContainer}>
               <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
+                style={[
+                  styles.roleButton,
+                  loginAs === 'user' && styles.roleButtonActive,
+                ]}
+                onPress={() => setLoginAs('user')}
               >
-                <Ionicons
-                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                  size={20}
-                  color="#a0aec0"
-                />
+                <Text
+                  style={[
+                    styles.roleButtonText,
+                    loginAs === 'user' && styles.roleButtonTextActive,
+                  ]}
+                >
+                  Student
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.roleButton,
+                  loginAs === 'counselor' && styles.roleButtonActive,
+                ]}
+                onPress={() => setLoginAs('counselor')}
+              >
+                <Text
+                  style={[
+                    styles.roleButtonText,
+                    loginAs === 'counselor' && styles.roleButtonTextActive,
+                  ]}
+                >
+                  Counselor
+                </Text>
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-            </TouchableOpacity>
+            <PaperTextInput
+              label="Email"
+              value={email}
+              onChangeText={setEmail}
+              mode="outlined"
+              style={styles.input}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              left={<PaperTextInput.Icon icon="email" />}
+            />
 
-            <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+            <PaperTextInput
+              label="Password"
+              value={password}
+              onChangeText={setPassword}
+              mode="outlined"
+              style={styles.input}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+              autoCorrect={false}
+              left={<PaperTextInput.Icon icon="lock" />}
+              right={
+                <PaperTextInput.Icon
+                  icon={showPassword ? 'eye-off' : 'eye'}
+                  onPress={() => setShowPassword(!showPassword)}
+                />
+              }
+            />
+
+            <Button
+              mode="contained"
               onPress={handleLogin}
-              disabled={isLoading}
+              style={styles.loginButton}
+              loading={loading}
+              disabled={loading}
             >
-              {isLoading ? (
-                <Text style={styles.loginButtonText}>Signing in...</Text>
-              ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              )}
-            </TouchableOpacity>
+              {loading ? 'Signing In...' : 'Sign In'}
+            </Button>
 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>OR</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            <TouchableOpacity style={styles.googleButton}>
-              <Ionicons name="logo-google" size={20} color="#ea4335" />
-              <Text style={styles.googleButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
+            <Button
+              mode="outlined"
+              onPress={handleSignup}
+              style={styles.signupButton}
+              disabled={loading}
+            >
+              Create New Account
+            </Button>
           </View>
 
           {/* Sign Up Link */}
           <View style={styles.signupSection}>
             <Text style={styles.signupText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/signup')}>
+            <TouchableOpacity onPress={handleSignup}>
               <Text style={styles.signupLink}>Sign up</Text>
             </TouchableOpacity>
           </View>
@@ -199,52 +247,38 @@ const styles = StyleSheet.create({
   formContainer: {
     marginBottom: 30,
   },
-  inputContainer: {
+  roleContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 20,
     backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    padding: 4,
   },
-  inputIcon: {
-    marginRight: 12,
-  },
-  input: {
+  roleButton: {
     flex: 1,
-    fontSize: 16,
-    color: '#1a202c',
-    paddingVertical: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  eyeIcon: {
-    padding: 8,
+  roleButtonActive: {
+    backgroundColor: '#667eea',
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 24,
-  },
-  forgotPasswordText: {
-    color: '#667eea',
+  roleButtonText: {
     fontSize: 14,
     fontWeight: '500',
+    color: '#4a5568',
+  },
+  roleButtonTextActive: {
+    color: '#fff',
+  },
+  input: {
+    marginBottom: 16,
   },
   loginButton: {
-    backgroundColor: '#667eea',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
+    marginTop: 20,
     marginBottom: 20,
-  },
-  loginButtonDisabled: {
-    backgroundColor: '#a0aec0',
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    paddingVertical: 12,
   },
   divider: {
     flexDirection: 'row',
@@ -261,21 +295,8 @@ const styles = StyleSheet.create({
     color: '#a0aec0',
     fontSize: 14,
   },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    gap: 8,
-  },
-  googleButtonText: {
-    color: '#1a202c',
-    fontSize: 16,
-    fontWeight: '500',
+  signupButton: {
+    marginBottom: 20,
   },
   signupSection: {
     flexDirection: 'row',

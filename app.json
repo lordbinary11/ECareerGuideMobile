@@ -29,6 +29,9 @@
     "scheme": "ecareerguide",
     "plugins": [
       "expo-router"
-    ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

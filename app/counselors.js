@@ -1,201 +1,193 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  TextInput,
-  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Card, Title, Paragraph, Button, Avatar, Chip, Searchbar } from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
+import apiService from '../services/api';
+import { theme } from '../theme';
 
-export default function Counselors() {
-  const router = useRouter();
+export default function CounselorsScreen() {
+  const [counselors, setCounselors] = useState([]);
+  const [filteredCounselors, setFilteredCounselors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSpecialty, setSelectedSpecialty] = useState('All');
+  const [selectedSpecialization, setSelectedSpecialization] = useState('all');
+  
+  const router = useRouter();
+  const { isAuthenticated } = useAuth();
 
-  const specialties = ['All', 'Technology', 'Healthcare', 'Business', 'Education', 'Arts', 'Engineering'];
+  useEffect(() => {
+    loadCounselors();
+  }, []);
 
-  const counselors = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      specialty: 'Technology',
-      experience: '8 years',
-      rating: 4.8,
-      reviews: 127,
-      availability: 'Available',
-      avatar: '👩‍💼',
-      description: 'Expert in software development careers and tech industry transitions.',
-      languages: ['English', 'Spanish'],
-      price: '$75/hour',
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      specialty: 'Healthcare',
-      experience: '12 years',
-      rating: 4.9,
-      reviews: 203,
-      availability: 'Available',
-      avatar: '👨‍⚕️',
-      description: 'Specialized in medical careers, nursing, and healthcare administration.',
-      languages: ['English', 'Mandarin'],
-      price: '$85/hour',
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Rodriguez',
-      specialty: 'Business',
-      experience: '10 years',
-      rating: 4.7,
-      reviews: 156,
-      availability: 'Available',
-      avatar: '👩‍💼',
-      description: 'Career strategist for business professionals and entrepreneurs.',
-      languages: ['English', 'Portuguese'],
-      price: '$90/hour',
-    },
-    {
-      id: 4,
-      name: 'James Wilson',
-      specialty: 'Engineering',
-      experience: '15 years',
-      rating: 4.9,
-      reviews: 189,
-      availability: 'Available',
-      avatar: '👨‍🔬',
-      description: 'Mechanical and electrical engineering career guidance expert.',
-      languages: ['English'],
-      price: '$80/hour',
-    },
-    {
-      id: 5,
-      name: 'Lisa Thompson',
-      specialty: 'Education',
-      experience: '6 years',
-      rating: 4.6,
-      reviews: 94,
-      availability: 'Available',
-      avatar: '👩‍🏫',
-      description: 'Educational leadership and teaching career development specialist.',
-      languages: ['English', 'French'],
-      price: '$70/hour',
-    },
-  ];
+  useEffect(() => {
+    filterCounselors();
+  }, [searchQuery, selectedSpecialization, counselors]);
 
-  const filteredCounselors = counselors.filter(counselor => {
-    const matchesSearch = counselor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         counselor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesSpecialty = selectedSpecialty === 'All' || counselor.specialty === selectedSpecialty;
-    return matchesSearch && matchesSpecialty;
-  });
+  const loadCounselors = async () => {
+    try {
+      setLoading(true);
+      const response = await apiService.getCounselors();
+      
+      if (response.success) {
+        setCounselors(response.counselors || []);
+      } else {
+        Alert.alert('Error', 'Failed to load counselors');
+      }
+    } catch (error) {
+      console.error('Load counselors error:', error);
+      Alert.alert('Error', 'Failed to load counselors. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const renderCounselorCard = ({ item }) => (
-    <View style={styles.counselorCard}>
-      <View style={styles.counselorHeader}>
-        <View style={styles.avatarContainer}>
-          <Text style={styles.avatar}>{item.avatar}</Text>
-        </View>
-        <View style={styles.counselorInfo}>
-          <Text style={styles.counselorName}>{item.name}</Text>
-          <Text style={styles.counselorSpecialty}>{item.specialty}</Text>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={16} color="#fbbf24" />
-            <Text style={styles.rating}>{item.rating}</Text>
-            <Text style={styles.reviews}>({item.reviews} reviews)</Text>
-          </View>
-        </View>
-        <View style={styles.availabilityContainer}>
-          <View style={styles.availabilityDot} />
-          <Text style={styles.availability}>{item.availability}</Text>
-        </View>
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadCounselors();
+    setRefreshing(false);
+  };
+
+  const filterCounselors = () => {
+    let filtered = counselors;
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(counselor =>
+        counselor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        counselor.specialization.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Filter by specialization
+    if (selectedSpecialization !== 'all') {
+      filtered = filtered.filter(counselor =>
+        counselor.specialization.toLowerCase() === selectedSpecialization.toLowerCase()
+      );
+    }
+
+    setFilteredCounselors(filtered);
+  };
+
+  const getSpecializations = () => {
+    const specializations = [...new Set(counselors.map(c => c.specialization))];
+    return ['all', ...specializations];
+  };
+
+  const handleCounselorPress = (counselor) => {
+    // Navigate to counselor detail page or start chat
+    Alert.alert(
+      'Counselor Options',
+      `What would you like to do with ${counselor.name}?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Send Message',
+          onPress: () => router.push(`/chat/${counselor.id}`),
+        },
+        {
+          text: 'Schedule Meeting',
+          onPress: () => router.push(`/schedule/${counselor.id}`),
+        },
+        {
+          text: 'View Profile',
+          onPress: () => router.push(`/counselor/${counselor.id}`),
+        },
+      ]
+    );
+  };
+
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 !== 0;
+
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <Ionicons key={i} name="star" size={16} color="#FFD700" />
+      );
+    }
+
+    if (hasHalfStar) {
+      stars.push(
+        <Ionicons key="half" name="star-half" size={16} color="#FFD700" />
+      );
+    }
+
+    const emptyStars = 5 - Math.ceil(rating);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <Ionicons key={`empty-${i}`} name="star-outline" size={16} color="#FFD700" />
+      );
+    }
+
+    return stars;
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Please login to view counselors</Text>
+        <Button mode="contained" onPress={() => router.push('/login')}>
+          Go to Login
+        </Button>
       </View>
-
-      <Text style={styles.description}>{item.description}</Text>
-
-      <View style={styles.counselorDetails}>
-        <View style={styles.detailItem}>
-          <Ionicons name="time-outline" size={16} color="#4a5568" />
-          <Text style={styles.detailText}>{item.experience} experience</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Ionicons name="language-outline" size={16} color="#4a5568" />
-          <Text style={styles.detailText}>{item.languages.join(', ')}</Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Ionicons name="cash-outline" size={16} color="#4a5568" />
-          <Text style={styles.detailText}>{item.price}</Text>
-        </View>
-      </View>
-
-      <View style={styles.actionButtons}>
-        <TouchableOpacity
-          style={styles.messageButton}
-          onPress={() => router.push(`/message-counselor/${item.id}`)}
-        >
-          <Ionicons name="chatbubble-outline" size={16} color="#667eea" />
-          <Text style={styles.messageButtonText}>Message</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.scheduleButton}
-          onPress={() => router.push(`/schedule-meeting/${item.id}`)}
-        >
-          <Ionicons name="calendar-outline" size={16} color="#fff" />
-          <Text style={styles.scheduleButtonText}>Schedule Meeting</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#667eea" />
-        </TouchableOpacity>
         <Text style={styles.headerTitle}>Career Counselors</Text>
-        <View style={styles.placeholder} />
+        <Text style={styles.headerSubtitle}>
+          Connect with experienced professionals
+        </Text>
       </View>
 
-      {/* Search Bar */}
+      {/* Search and Filters */}
       <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <Ionicons name="search-outline" size={20} color="#a0aec0" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search counselors..."
-            placeholderTextColor="#a0aec0"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-      </View>
-
-      {/* Specialty Filter */}
-      <View style={styles.filterContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {specialties.map((specialty) => (
+        <Searchbar
+          placeholder="Search counselors..."
+          onChangeText={setSearchQuery}
+          value={searchQuery}
+          style={styles.searchBar}
+        />
+        
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+        >
+          {getSpecializations().map((spec) => (
             <TouchableOpacity
-              key={specialty}
+              key={spec}
               style={[
                 styles.filterChip,
-                selectedSpecialty === specialty && styles.filterChipActive
+                selectedSpecialization === spec && styles.filterChipActive,
               ]}
-              onPress={() => setSelectedSpecialty(specialty)}
+              onPress={() => setSelectedSpecialization(spec)}
             >
-              <Text style={[
-                styles.filterChipText,
-                selectedSpecialty === specialty && styles.filterChipTextActive
-              ]}>
-                {specialty}
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedSpecialization === spec && styles.filterChipTextActive,
+                ]}
+              >
+                {spec === 'all' ? 'All' : spec}
               </Text>
             </TouchableOpacity>
           ))}
@@ -203,119 +195,201 @@ export default function Counselors() {
       </View>
 
       {/* Counselors List */}
-      <FlatList
-        data={filteredCounselors}
-        renderItem={renderCounselorCard}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.counselorsList}
-        showsVerticalScrollIndicator={false}
-      />
-    </SafeAreaView>
+      <ScrollView
+        style={styles.counselorsList}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading counselors...</Text>
+          </View>
+        ) : filteredCounselors.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="people-outline" size={64} color={theme.colors.onSurfaceVariant} />
+            <Text style={styles.emptyText}>No counselors found</Text>
+            <Text style={styles.emptySubtext}>
+              Try adjusting your search or filters
+            </Text>
+          </View>
+        ) : (
+          filteredCounselors.map((counselor) => (
+            <Card
+              key={counselor.id}
+              style={styles.counselorCard}
+              onPress={() => handleCounselorPress(counselor)}
+            >
+              <Card.Content>
+                <View style={styles.counselorHeader}>
+                  <Avatar.Text
+                    size={60}
+                    label={counselor.name.charAt(0)}
+                    style={styles.counselorAvatar}
+                  />
+                  <View style={styles.counselorInfo}>
+                    <Title style={styles.counselorName}>{counselor.name}</Title>
+                    <Chip
+                      mode="outlined"
+                      textStyle={styles.specializationChip}
+                      style={styles.specializationChip}
+                    >
+                      {counselor.specialization}
+                    </Chip>
+                    <View style={styles.ratingContainer}>
+                      <View style={styles.stars}>
+                        {renderStars(counselor.rating || 0)}
+                      </View>
+                      <Text style={styles.ratingText}>
+                        {counselor.rating ? `${counselor.rating.toFixed(1)}` : 'No rating'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.counselorDetails}>
+                  <View style={styles.detailItem}>
+                    <Ionicons name="briefcase-outline" size={16} color={theme.colors.onSurfaceVariant} />
+                    <Text style={styles.detailText}>
+                      {counselor.experience} years experience
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.detailItem}>
+                    <Ionicons name="time-outline" size={16} color={theme.colors.onSurfaceVariant} />
+                    <Text style={styles.detailText}>
+                      {counselor.availability}
+                    </Text>
+                  </View>
+
+                  {counselor.phone && (
+                    <View style={styles.detailItem}>
+                      <Ionicons name="call-outline" size={16} color={theme.colors.onSurfaceVariant} />
+                      <Text style={styles.detailText}>{counselor.phone}</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.actionButtons}>
+                  <Button
+                    mode="outlined"
+                    onPress={() => router.push(`/chat/${counselor.id}`)}
+                    style={styles.actionButton}
+                    icon="message"
+                  >
+                    Message
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={() => router.push(`/schedule/${counselor.id}`)}
+                    style={styles.actionButton}
+                    icon="calendar"
+                  >
+                    Schedule
+                  </Button>
+                </View>
+              </Card.Content>
+            </Card>
+          ))
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.colors.background,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  backButton: {
-    padding: 8,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#1a202c',
+    color: theme.colors.onPrimary,
+    marginBottom: theme.spacing.xs,
   },
-  placeholder: {
-    width: 40,
+  headerSubtitle: {
+    fontSize: 14,
+    color: theme.colors.onPrimary,
+    opacity: 0.8,
   },
   searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    padding: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
   },
-  searchInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  searchInput: {
-    flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    color: '#1a202c',
+  searchBar: {
+    marginBottom: theme.spacing.md,
   },
   filterContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    marginBottom: theme.spacing.sm,
   },
   filterChip: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginRight: theme.spacing.sm,
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.surfaceVariant,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.outlineVariant,
   },
   filterChipActive: {
-    backgroundColor: '#667eea',
-    borderColor: '#667eea',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   filterChipText: {
-    color: '#4a5568',
     fontSize: 14,
-    fontWeight: '500',
+    color: theme.colors.onSurfaceVariant,
   },
   filterChipTextActive: {
-    color: '#fff',
+    color: theme.colors.onPrimary,
   },
   counselorsList: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    flex: 1,
+    padding: theme.spacing.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xxl,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: theme.colors.onSurfaceVariant,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xxl,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: theme.colors.onSurface,
+    marginTop: theme.spacing.md,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: theme.colors.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: theme.spacing.sm,
   },
   counselorCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    marginBottom: theme.spacing.md,
+    ...theme.shadows.medium,
   },
   counselorHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
-  avatarContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#f7fafc',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  avatar: {
-    fontSize: 32,
+  counselorAvatar: {
+    backgroundColor: theme.colors.primary,
+    marginRight: theme.spacing.md,
   },
   counselorInfo: {
     flex: 1,
@@ -323,99 +397,48 @@ const styles = StyleSheet.create({
   counselorName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1a202c',
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
-  counselorSpecialty: {
-    fontSize: 14,
-    color: '#667eea',
-    fontWeight: '500',
-    marginBottom: 4,
+  specializationChip: {
+    alignSelf: 'flex-start',
+    marginBottom: theme.spacing.sm,
   },
   ratingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  rating: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1a202c',
-    marginLeft: 4,
+  stars: {
+    flexDirection: 'row',
+    marginRight: theme.spacing.sm,
   },
-  reviews: {
-    fontSize: 14,
-    color: '#4a5568',
-    marginLeft: 4,
-  },
-  availabilityContainer: {
-    alignItems: 'center',
-  },
-  availabilityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#48bb78',
-    marginBottom: 4,
-  },
-  availability: {
+  ratingText: {
     fontSize: 12,
-    color: '#48bb78',
-    fontWeight: '500',
-  },
-  description: {
-    fontSize: 14,
-    color: '#4a5568',
-    lineHeight: 20,
-    marginBottom: 16,
+    color: theme.colors.onSurfaceVariant,
   },
   counselorDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: theme.spacing.md,
   },
   detailItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: theme.spacing.xs,
   },
   detailText: {
-    fontSize: 12,
-    color: '#4a5568',
-    marginLeft: 4,
+    fontSize: 14,
+    color: theme.colors.onSurfaceVariant,
+    marginLeft: theme.spacing.sm,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: theme.spacing.sm,
   },
-  messageButton: {
+  actionButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f7fafc',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#667eea',
-    gap: 6,
   },
-  messageButtonText: {
-    color: '#667eea',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  scheduleButton: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#667eea',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 6,
-  },
-  scheduleButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+  errorText: {
+    textAlign: 'center',
+    fontSize: 16,
+    color: theme.colors.error,
+    margin: theme.spacing.xxl,
   },
 }); 
